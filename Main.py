@@ -48,5 +48,5 @@ def stitchWithFeature():
                             startNum=1, fileExtension="jpg", outputfileExtension="jpg")
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     stitchWithFeature()

@@ -5,7 +5,7 @@ import time
 import os
 import glob
 import skimage.measure
-from numba import jit
+# from numba import jit
 import ImageUtility as Utility
 import ImageFusion
 import time
@@ -369,12 +369,13 @@ class Stitcher(Utility.Method):
         dxSum = dySum = 0
         imageList = []
         # imageList.append(cv2.imread(fileList[0], 0))
-        imageList.append(cv2.imdecode(np.fromfile(fileList[0], dtype=np.uint8), cv2.IMREAD_GRAYSCALE))
+        # imageList.append(cv2.imdecode(np.fromfile(fileList[0], dtype=np.uint8), cv2.IMREAD_GRAYSCALE))
+        imageList.append(cv2.imdecode(np.fromfile(fileList[0], dtype=np.uint8), cv2.IMREAD_COLOR))
         resultRow = imageList[0].shape[0]         # 拼接最终结果的横轴长度,先赋值第一个图像的横轴
         resultCol = imageList[0].shape[1]         # 拼接最终结果的纵轴长度,先赋值第一个图像的纵轴
         offsetListOrigin.insert(0, [0, 0])        # 增加第一张图像相对于最终结果的原点的偏移量
 
-        rangeX = [[0,0] for x in range(len(offsetListOrigin))]  # 主要用于记录X方向最大最小边界
+        rangeX = [[0, 0] for x in range(len(offsetListOrigin))]  # 主要用于记录X方向最大最小边界
         rangeY = [[0, 0] for x in range(len(offsetListOrigin))] # 主要用于记录Y方向最大最小边界
         offsetList = offsetListOrigin.copy()
         rangeX[0][1] = imageList[0].shape[0]
@@ -384,7 +385,8 @@ class Stitcher(Utility.Method):
             # self.printAndWrite("  stitching " + str(fileList[i]))
             # 适用于流形拼接的校正,并更新最终图像大小
             # tempImage = cv2.imread(fileList[i], 0)
-            tempImage = cv2.imdecode(np.fromfile(fileList[i], dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+            # tempImage = cv2.imdecode(np.fromfile(fileList[i], dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+            tempImage = cv2.imdecode(np.fromfile(fileList[i], dtype=np.uint8), cv2.IMREAD_COLOR)
             dxSum = dxSum + offsetList[i][0]
             dySum = dySum + offsetList[i][1]
             # self.printAndWrite("  The dxSum is " + str(dxSum) + " and the dySum is " + str(dySum))
@@ -413,14 +415,14 @@ class Stitcher(Utility.Method):
                 resultCol = max(resultCol, dySum + tempImage.shape[1])
                 rangeY[i][1] = resultCol
             imageList.append(tempImage)
-        stitchResult = np.zeros((resultRow, resultCol), np.int) - 1
+        stitchResult = np.zeros((resultRow, resultCol, 3), np.int) - 1
         # stitchResult = np.zeros((resultRow, resultCol), np.int)
         self.printAndWrite("  The rectified offsetList is " + str(offsetList))
         # 如上算出各个图像相对于原点偏移量，并最终计算出输出图像大小，并构造矩阵，如下开始赋值
         for i in range(0, len(offsetList)):
             self.printAndWrite("  stitching " + str(fileList[i]))
             if i == 0:
-                stitchResult[offsetList[0][0]: offsetList[0][0] + imageList[0].shape[0], offsetList[0][1]: offsetList[0][1] + imageList[0].shape[1]] = imageList[0]
+                stitchResult[offsetList[0][0]: offsetList[0][0] + imageList[0].shape[0], offsetList[0][1]: offsetList[0][1] + imageList[0].shape[1], :] = imageList[0]
             else:
                 if self.fuseMethod == "notFuse":
                     # 适用于无图像融合，直接覆盖
@@ -444,10 +446,10 @@ class Stitcher(Utility.Method):
                     # self.printAndWrite("Stitch " + str(i + 1) + "th, the roi_ltx is " + str(
                     #     roi_ltx) + " and the roi_lty is " + str(roi_lty) + " and the roi_rbx is " + str(
                     #     roi_rbx) + " and the roi_rby is " + str(roi_rby))
-                    roiImageRegionA = stitchResult[roi_ltx:roi_rbx, roi_lty:roi_rby].copy()
-                    stitchResult[offsetList[i][0]: offsetList[i][0] + imageList[i].shape[0], offsetList[i][1]: offsetList[i][1] + imageList[i].shape[1]] = imageList[i]
-                    roiImageRegionB = stitchResult[roi_ltx:roi_rbx, roi_lty:roi_rby].copy()
-                    stitchResult[roi_ltx:roi_rbx, roi_lty:roi_rby] = self.fuseImage([roiImageRegionA, roiImageRegionB], offsetListOrigin[i][0], offsetListOrigin[i][1])
+                    roiImageRegionA = stitchResult[roi_ltx:roi_rbx, roi_lty:roi_rby, :].copy()
+                    stitchResult[offsetList[i][0]: offsetList[i][0] + imageList[i].shape[0], offsetList[i][1]: offsetList[i][1] + imageList[i].shape[1], :] = imageList[i]
+                    roiImageRegionB = stitchResult[roi_ltx:roi_rbx, roi_lty:roi_rby, :].copy()
+                    stitchResult[roi_ltx:roi_rbx, roi_lty:roi_rby, :] = self.fuseImage([roiImageRegionA, roiImageRegionB], offsetListOrigin[i][0], offsetListOrigin[i][1])
         stitchResult[stitchResult == -1] = 0
         return stitchResult.astype(np.uint8)
 
